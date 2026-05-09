@@ -20,7 +20,8 @@ async def execute(payload: dict) -> dict:
         command (str): the command string to execute
         timeout (int): seconds to wait (default 30)
     """
-    command_str: str = payload.get("command", "")
+    # "shell" is the shell command string; "command" is reserved for handler name
+    command_str: str = payload.get("shell", payload.get("cmd", ""))
     timeout: int = int(payload.get("timeout", 30))
 
     if not command_str.strip():

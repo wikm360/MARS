@@ -208,7 +208,7 @@ async def cmd_exec(conn, cfg, args):
         console.print("[red]Usage: exec <command>[/]")
         return
     with console.status(f"Running: [cyan]{command}[/] ..."):
-        result = await send_command(conn, cfg, "execute", {"command": command})
+        result = await send_command(conn, cfg, "execute", {"shell": command})
     if result:
         if result.type == MessageType.COMMAND_ERROR:
             console.print(f"[red]Error:[/] {result.payload.get('error')}")

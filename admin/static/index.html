@@ -471,8 +471,9 @@ function sendCmd(command, extraPayload = {}, timeout = 30000) {
     S.pending.set(msgId, {resolve, reject, timer});
     S.cmdCount++;
     document.getElementById('stat-cmds').textContent = S.cmdCount;
+    // command and msg_id come AFTER spread so extraPayload cannot overwrite them
     wsSend({ type: 'command', target_id: S.selected, msg_id: msgId,
-             payload: { command, msg_id: msgId, ...extraPayload } });
+             payload: { ...extraPayload, command, msg_id: msgId } });
   });
 }
 
@@ -482,11 +483,11 @@ function renderSidebar() {
   document.getElementById('sidebar-count').textContent = ids.length;
   document.getElementById('stat-clients').textContent = ids.length;
   const list = document.getElementById('client-list');
-  const nc = document.getElementById('no-clients');
   if (!ids.length) {
-    nc.style.display = 'block'; list.innerHTML = ''; list.appendChild(nc); return;
+    list.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--text-dim);font-size:11px;font-family:var(--font-mono)">
+      <div style="font-size:32px;opacity:.3;margin-bottom:12px">📡</div>No agents online</div>`;
+    return;
   }
-  nc.style.display = 'none';
   list.innerHTML = ids.map(id => {
     const c = S.clients[id];
     const sel = id === S.selected ? 'selected' : '';
@@ -613,7 +614,7 @@ async function termSend() {
       if (!args.length) { termPrint('Usage: exec <command>', 'err'); return; }
       const cmd = args.join(' ');
       termPrint(`Running: ${cmd}`, 'info');
-      const res = await sendCmd('execute', {command: cmd});
+      const res = await sendCmd('execute', {shell: cmd});
       if (res.stdout) termPrint(res.stdout.trimEnd(), 'out');
       if (res.stderr) termPrint(res.stderr.trimEnd(), 'err');
       termPrint(`Exit: ${res.exit_code}`, res.exit_code === 0 ? 'success' : 'err');
