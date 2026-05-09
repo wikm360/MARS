@@ -296,7 +296,8 @@ async def main() -> None:
     port = CFG["server"]["port"]
     log.info("MRAS Server starting on %s:%d", host, port)
 
-    async with websockets.serve(router, host, port, ping_interval=20, ping_timeout=30):
+    async with websockets.serve(router, host, port, ping_interval=20, ping_timeout=30,
+                                max_size=20 * 1024 * 1024):
         log.info("Server ready.")
         await asyncio.Future()
 

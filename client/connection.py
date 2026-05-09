@@ -104,7 +104,8 @@ class ClientConnection:
         cipher = SessionCipher(key)
         token = client_token_from_secret(self._secret)
 
-        async with websockets.connect(uri, ping_interval=None) as ws:
+        async with websockets.connect(uri, ping_interval=None,
+                                      max_size=20 * 1024 * 1024) as ws:
             # --- Authenticate ---
             auth_msg = Message(
                 type=MessageType.AUTH,

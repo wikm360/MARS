@@ -34,7 +34,8 @@ class AdminConnection:
         key, _ = derive_key(self._secret, salt)
         self._cipher = SessionCipher(key)
 
-        self._ws = await websockets.connect(self._server_uri, ping_interval=None)
+        self._ws = await websockets.connect(self._server_uri, ping_interval=None,
+                                            max_size=20 * 1024 * 1024)
 
         auth_msg = Message(
             type=MessageType.AUTH,
