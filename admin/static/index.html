@@ -219,6 +219,43 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
 .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text-dim);gap:12px}
 .empty-state-icon{font-size:48px;opacity:.2}
 .empty-state-text{font-family:var(--font-mono);font-size:12px;text-align:center;line-height:1.8}
+
+/* ── Monitor panel ───────────────────────────────────────────────────────── */
+#panel-monitor{flex-direction:column;overflow:hidden}
+#mon-toolbar{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg2)}
+#mon-body{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:0}
+#mon-graphs{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border);flex-shrink:0}
+.graph-cell{background:var(--bg);padding:14px 16px 10px}
+.graph-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.graph-label{font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim)}
+.graph-val{font-family:var(--font-mono);font-size:18px;font-weight:700}
+.graph-sub{font-family:var(--font-mono);font-size:9px;color:var(--text-dim);margin-top:2px}
+.graph-canvas{width:100%;height:80px;display:block}
+#mon-stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);flex-shrink:0}
+.mon-stat{background:var(--bg2);padding:12px 16px;display:flex;flex-direction:column;gap:3px}
+.mon-stat-lbl{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--text-dim);font-family:var(--font-mono)}
+.mon-stat-val{font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--cyan)}
+#mon-proc-section{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#mon-proc-bar{display:flex;align-items:center;gap:10px;padding:9px 16px;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0}
+#mon-proc-search{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:4px 10px;color:var(--text);font-family:var(--font-mono);font-size:11px;outline:none}
+#mon-proc-search:focus{border-color:var(--green)}
+#mon-proc-table-wrap{flex:1;overflow-y:auto}
+#mon-proc-table{width:100%;border-collapse:collapse;font-family:var(--font-mono);font-size:11px}
+#mon-proc-table th{position:sticky;top:0;background:var(--bg3);padding:7px 12px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--text-dim);border-bottom:1px solid var(--border);cursor:pointer;user-select:none;white-space:nowrap}
+#mon-proc-table th:hover{color:var(--green)}
+#mon-proc-table th.sorted{color:var(--cyan)}
+#mon-proc-table td{padding:5px 12px;border-bottom:1px solid rgba(28,28,54,.6);color:var(--text);white-space:nowrap;overflow:hidden;max-width:200px;text-overflow:ellipsis}
+#mon-proc-table tr:hover td{background:var(--bg2)}
+.proc-cpu-bar{display:inline-block;height:6px;border-radius:3px;background:var(--green);vertical-align:middle;margin-right:6px;transition:width .3s}
+.proc-status-run{color:var(--green)}
+.proc-status-slp{color:var(--text-dim)}
+.proc-status-oth{color:var(--orange)}
+.kill-btn{background:transparent;border:1px solid var(--border);color:var(--text-dim);font-family:var(--font-mono);font-size:9px;padding:2px 6px;border-radius:3px;cursor:pointer;transition:all .15s}
+.kill-btn:hover{border-color:var(--red);color:var(--red)}
+.mon-badge{display:inline-block;padding:1px 7px;border-radius:10px;font-size:9px;font-weight:700}
+.mon-badge.green{background:rgba(0,255,136,.15);color:var(--green)}
+.mon-badge.red{background:rgba(255,68,68,.15);color:var(--red)}
+.mon-badge.orange{background:rgba(255,140,0,.15);color:var(--orange)}
 </style>
 </head>
 <body>
@@ -274,6 +311,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
           <div class="tab" data-tab="screenshots">🖼 Screenshots</div>
           <div class="tab" data-tab="files">📁 Files</div>
           <div class="tab" data-tab="sysinfo">📊 Sysinfo</div>
+          <div class="tab" data-tab="monitor">📈 Monitor</div>
         </div>
 
         <!-- Panels -->
@@ -332,6 +370,120 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
               <div class="empty-state">
                 <div class="empty-state-icon">📁</div>
                 <div class="empty-state-text">Enter a remote path and click List.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Monitor -->
+          <div class="panel" id="panel-monitor">
+            <!-- Toolbar -->
+            <div id="mon-toolbar">
+              <button class="btn-primary" id="mon-toggle-btn" onclick="monToggle()">▶ Start</button>
+              <div style="display:flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:10px;color:var(--text-dim)">
+                Interval:
+                <select id="mon-interval" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--font-mono);font-size:10px;padding:3px 6px;border-radius:var(--radius-sm);outline:none">
+                  <option value="1000">1s</option>
+                  <option value="2000" selected>2s</option>
+                  <option value="5000">5s</option>
+                </select>
+              </div>
+              <button class="btn-primary" onclick="monRefreshProcs()" style="border-color:var(--cyan);color:var(--cyan)">⟳ Processes</button>
+              <div id="mon-status" style="font-family:var(--font-mono);font-size:10px;color:var(--text-dim);margin-left:4px">Idle</div>
+              <div style="margin-left:auto;display:flex;gap:8px">
+                <div style="font-family:var(--font-mono);font-size:9px;color:var(--text-dim);display:flex;align-items:center;gap:4px">
+                  <span style="display:inline-block;width:10px;height:2px;background:var(--green)"></span>CPU
+                  <span style="display:inline-block;width:10px;height:2px;background:var(--cyan);margin-left:8px"></span>RAM
+                  <span style="display:inline-block;width:10px;height:2px;background:var(--orange);margin-left:8px"></span>Net↑
+                  <span style="display:inline-block;width:10px;height:2px;background:var(--purple);margin-left:8px"></span>Net↓
+                </div>
+              </div>
+            </div>
+
+            <div id="mon-body">
+              <!-- 4 Graphs -->
+              <div id="mon-graphs">
+                <div class="graph-cell">
+                  <div class="graph-title">
+                    <div><div class="graph-label">CPU Usage</div><div class="graph-sub" id="mon-cpu-sub">–</div></div>
+                    <div class="graph-val" id="mon-cpu-val" style="color:var(--green)">–%</div>
+                  </div>
+                  <canvas class="graph-canvas" id="canvas-cpu"></canvas>
+                </div>
+                <div class="graph-cell">
+                  <div class="graph-title">
+                    <div><div class="graph-label">RAM Usage</div><div class="graph-sub" id="mon-ram-sub">–</div></div>
+                    <div class="graph-val" id="mon-ram-val" style="color:var(--cyan)">–%</div>
+                  </div>
+                  <canvas class="graph-canvas" id="canvas-ram"></canvas>
+                </div>
+                <div class="graph-cell">
+                  <div class="graph-title">
+                    <div><div class="graph-label">Network I/O</div><div class="graph-sub" id="mon-net-sub">–</div></div>
+                    <div class="graph-val" id="mon-net-val" style="color:var(--orange)">–</div>
+                  </div>
+                  <canvas class="graph-canvas" id="canvas-net"></canvas>
+                </div>
+                <div class="graph-cell">
+                  <div class="graph-title">
+                    <div><div class="graph-label">Disk I/O</div><div class="graph-sub" id="mon-disk-sub">–</div></div>
+                    <div class="graph-val" id="mon-disk-val" style="color:var(--yellow)">–</div>
+                  </div>
+                  <canvas class="graph-canvas" id="canvas-disk"></canvas>
+                </div>
+              </div>
+
+              <!-- Quick stats row -->
+              <div id="mon-stats-row">
+                <div class="mon-stat">
+                  <div class="mon-stat-lbl">Disk Used</div>
+                  <div class="mon-stat-val" id="mon-disk-used">–</div>
+                </div>
+                <div class="mon-stat">
+                  <div class="mon-stat-lbl">Net ↑ Total</div>
+                  <div class="mon-stat-val" id="mon-net-sent">–</div>
+                </div>
+                <div class="mon-stat">
+                  <div class="mon-stat-lbl">Net ↓ Total</div>
+                  <div class="mon-stat-val" id="mon-net-recv">–</div>
+                </div>
+                <div class="mon-stat">
+                  <div class="mon-stat-lbl">Processes</div>
+                  <div class="mon-stat-val" id="mon-proc-count">–</div>
+                </div>
+              </div>
+
+              <!-- Process list -->
+              <div id="mon-proc-section">
+                <div id="mon-proc-bar">
+                  <span style="font-family:var(--font-mono);font-size:10px;color:var(--text-dim)">PROCESSES</span>
+                  <input id="mon-proc-search" type="text" placeholder="Search by name or PID..." oninput="monFilterProcs()"/>
+                  <select id="mon-proc-sort" onchange="monRefreshProcs()" style="background:var(--bg3);border:1px solid var(--border);color:var(--text);font-family:var(--font-mono);font-size:10px;padding:3px 6px;border-radius:var(--radius-sm);outline:none">
+                    <option value="cpu">Sort: CPU</option>
+                    <option value="ram_mb">Sort: RAM</option>
+                    <option value="name">Sort: Name</option>
+                    <option value="pid">Sort: PID</option>
+                  </select>
+                </div>
+                <div id="mon-proc-table-wrap">
+                  <table id="mon-proc-table">
+                    <thead>
+                      <tr>
+                        <th onclick="monSortProcs('pid')">PID</th>
+                        <th onclick="monSortProcs('name')">Name</th>
+                        <th onclick="monSortProcs('cpu')" class="sorted">CPU %</th>
+                        <th onclick="monSortProcs('ram_mb')">RAM MB</th>
+                        <th onclick="monSortProcs('status')">Status</th>
+                        <th>User</th>
+                        <th style="width:60px"></th>
+                      </tr>
+                    </thead>
+                    <tbody id="mon-proc-tbody">
+                      <tr><td colspan="7" style="text-align:center;color:var(--text-dim);padding:30px">
+                        Click "Processes" to load process list
+                      </td></tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
@@ -548,6 +700,7 @@ function renderClientsGrid() {
 }
 
 function selectClient(id) {
+  if (S.selected !== id) monStop();
   S.selected = id;
   updatePrompt();
   renderSidebar();
@@ -899,10 +1052,311 @@ async function fetchSysinfo() {
   }
 }
 
+// ── Monitor ────────────────────────────────────────────────────────────────
+const MON = {
+  running: false,
+  timer: null,
+  allProcs: [],
+  sortField: 'cpu',
+  // Rolling history buffers (60 points)
+  hist: { cpu: [], ram: [], netUp: [], netDown: [], diskR: [], diskW: [] },
+  MAX: 60,
+};
+
+// ── Graph drawing ──────────────────────────────────────────────────────────
+function initCanvas(id) {
+  const el = document.getElementById(id);
+  if (!el) return null;
+  const dpr = window.devicePixelRatio || 1;
+  const rect = el.getBoundingClientRect();
+  const w = rect.width  || el.parentElement.clientWidth || 400;
+  const h = rect.height || 80;
+  el.width  = w * dpr;
+  el.height = h * dpr;
+  const ctx = el.getContext('2d');
+  ctx.scale(dpr, dpr);
+  el._w = w; el._h = h;
+  return ctx;
+}
+
+const COLORS = {
+  cpu:     '#00ff88',
+  ram:     '#00d4ff',
+  netUp:   '#ff8c00',
+  netDown: '#7c3aed',
+  diskR:   '#ffd700',
+  diskW:   '#ff4444',
+};
+
+function drawGraph(canvasId, series, maxVal) {
+  const el = document.getElementById(canvasId);
+  if (!el) return;
+  const ctx = el.getContext('2d');
+  if (!ctx) return;
+  const w = el._w || el.clientWidth;
+  const h = el._h || el.clientHeight;
+  ctx.clearRect(0, 0, w, h);
+
+  // Background grid
+  ctx.strokeStyle = 'rgba(28,28,54,0.8)';
+  ctx.lineWidth = 1;
+  [0.25, 0.5, 0.75].forEach(f => {
+    ctx.beginPath();
+    ctx.moveTo(0, h * f);
+    ctx.lineTo(w, h * f);
+    ctx.stroke();
+  });
+
+  const N = MON.MAX;
+  const step = w / (N - 1);
+
+  series.forEach(({ data, color, fill }) => {
+    if (!data.length) return;
+    const mx = maxVal > 0 ? maxVal : (Math.max(...data) || 1);
+    const padded = Array(N - data.length).fill(0).concat(data);
+
+    ctx.beginPath();
+    padded.forEach((v, i) => {
+      const x = i * step;
+      const y = h - (v / mx) * (h - 4) - 2;
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+
+    if (fill) {
+      const grad = ctx.createLinearGradient(0, 0, 0, h);
+      grad.addColorStop(0, color + '55');
+      grad.addColorStop(1, color + '00');
+      ctx.lineTo((N - 1) * step, h);
+      ctx.lineTo(0, h);
+      ctx.closePath();
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      // Redraw line on top
+      ctx.beginPath();
+      padded.forEach((v, i) => {
+        const x = i * step;
+        const y = h - (v / mx) * (h - 4) - 2;
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      });
+    }
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+  });
+}
+
+function push(key, val) {
+  MON.hist[key].push(val);
+  if (MON.hist[key].length > MON.MAX) MON.hist[key].shift();
+}
+
+function monDraw(data) {
+  push('cpu',     data.cpu_percent);
+  push('ram',     data.ram_percent);
+  push('netUp',   data.net_sent_kb);
+  push('netDown', data.net_recv_kb);
+  push('diskR',   data.disk_read_kb);
+  push('diskW',   data.disk_write_kb);
+
+  // CPU graph
+  document.getElementById('mon-cpu-val').textContent = data.cpu_percent + '%';
+  document.getElementById('mon-cpu-sub').textContent =
+    (data.cpu_cores || []).map(c => c + '%').join(' · ').slice(0, 60);
+  drawGraph('canvas-cpu',
+    [{ data: MON.hist.cpu, color: COLORS.cpu, fill: true }], 100);
+
+  // RAM graph
+  document.getElementById('mon-ram-val').textContent = data.ram_percent + '%';
+  document.getElementById('mon-ram-sub').textContent =
+    `${data.ram_used_mb} / ${data.ram_total_mb} MB`;
+  drawGraph('canvas-ram',
+    [{ data: MON.hist.ram, color: COLORS.ram, fill: true }], 100);
+
+  // Network graph (two lines)
+  const netMax = Math.max(...MON.hist.netUp, ...MON.hist.netDown, 1);
+  const upNow  = data.net_sent_kb;
+  const dnNow  = data.net_recv_kb;
+  document.getElementById('mon-net-val').textContent =
+    upNow >= 1024 ? (upNow/1024).toFixed(1)+' MB/s' : upNow.toFixed(0)+' KB/s';
+  document.getElementById('mon-net-sub').textContent =
+    `↑ ${fmtKB(upNow)}  ↓ ${fmtKB(dnNow)}`;
+  drawGraph('canvas-net', [
+    { data: MON.hist.netUp,   color: COLORS.netUp   },
+    { data: MON.hist.netDown, color: COLORS.netDown  },
+  ], netMax);
+
+  // Disk I/O graph
+  const diskMax = Math.max(...MON.hist.diskR, ...MON.hist.diskW, 1);
+  document.getElementById('mon-disk-val').textContent =
+    fmtKB(data.disk_read_kb + data.disk_write_kb);
+  document.getElementById('mon-disk-sub').textContent =
+    `R ${fmtKB(data.disk_read_kb)}  W ${fmtKB(data.disk_write_kb)}`;
+  drawGraph('canvas-disk', [
+    { data: MON.hist.diskR, color: COLORS.diskR },
+    { data: MON.hist.diskW, color: COLORS.diskW },
+  ], diskMax);
+
+  // Stats row
+  document.getElementById('mon-disk-used').textContent =
+    `${data.disk_used_gb} / ${data.disk_total_gb} GB (${data.disk_percent}%)`;
+  document.getElementById('mon-net-sent').textContent = fmtKB(data.net_sent_kb) + '/s';
+  document.getElementById('mon-net-recv').textContent = fmtKB(data.net_recv_kb) + '/s';
+  document.getElementById('mon-proc-count').textContent = (data.top_processes||[]).length + ' shown';
+
+  // Mini top-process table inside live stats (top 12 by CPU)
+  monDrawTopProcs(data.top_processes || []);
+}
+
+function fmtKB(kb) {
+  if (kb >= 1024*1024) return (kb/1024/1024).toFixed(1)+' GB/s';
+  if (kb >= 1024)      return (kb/1024).toFixed(1)+' MB/s';
+  return kb.toFixed(0)+' KB/s';
+}
+
+// ── Live polling ───────────────────────────────────────────────────────────
+async function monPoll() {
+  if (!MON.running || !S.selected) return;
+  const status = document.getElementById('mon-status');
+  try {
+    status.textContent = 'Polling...';
+    status.style.color = 'var(--green)';
+    const res = await sendCmd('monitor_stats', {}, 8000);
+    monDraw(res);
+    status.textContent = `Updated ${new Date().toLocaleTimeString()}`;
+  } catch(e) {
+    status.textContent = 'Error: ' + e;
+    status.style.color = 'var(--red)';
+  }
+  if (MON.running) {
+    const iv = parseInt(document.getElementById('mon-interval').value) || 2000;
+    MON.timer = setTimeout(monPoll, iv);
+  }
+}
+
+function monToggle() {
+  if (!S.selected) { toast('error', 'No agent selected'); return; }
+  MON.running = !MON.running;
+  const btn = document.getElementById('mon-toggle-btn');
+  if (MON.running) {
+    btn.textContent = '⏹ Stop';
+    btn.style.borderColor = 'var(--red)';
+    btn.style.color = 'var(--red)';
+    monInitCanvases();
+    monPoll();
+  } else {
+    if (MON.timer) clearTimeout(MON.timer);
+    btn.textContent = '▶ Start';
+    btn.style.borderColor = '';
+    btn.style.color = '';
+    document.getElementById('mon-status').textContent = 'Stopped';
+  }
+}
+
+function monInitCanvases() {
+  ['canvas-cpu','canvas-ram','canvas-net','canvas-disk'].forEach(id => {
+    // Force layout pass so getBoundingClientRect works
+    const el = document.getElementById(id);
+    if (el) { el.style.width='100%'; initCanvas(id); }
+  });
+}
+
+// ── Process list ───────────────────────────────────────────────────────────
+async function monRefreshProcs() {
+  if (!S.selected) { toast('error', 'No agent selected'); return; }
+  const sort = document.getElementById('mon-proc-sort').value || 'cpu';
+  const tbody = document.getElementById('mon-proc-tbody');
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px"><div class="spinner" style="margin:auto"></div></td></tr>';
+  try {
+    const res = await sendCmd('list_processes', {sort}, 15000);
+    MON.allProcs = res.processes || [];
+    MON.sortField = sort;
+    document.getElementById('mon-proc-count').textContent = MON.allProcs.length;
+    monFilterProcs();
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="7" style="color:var(--red);padding:16px">${esc(String(e))}</td></tr>`;
+  }
+}
+
+function monFilterProcs() {
+  const q = (document.getElementById('mon-proc-search').value || '').toLowerCase();
+  const rows = q
+    ? MON.allProcs.filter(p => p.name.toLowerCase().includes(q) || String(p.pid).includes(q))
+    : MON.allProcs;
+  renderProcTable(rows);
+}
+
+function monSortProcs(field) {
+  document.querySelectorAll('#mon-proc-table th').forEach(th => th.classList.remove('sorted'));
+  event.target.classList.add('sorted');
+  const rev = ['cpu','ram_mb','pid'].includes(field);
+  MON.allProcs.sort((a,b) => rev ? (b[field]||0)-(a[field]||0) : (a[field]||'').toString().localeCompare((b[field]||'').toString()));
+  monFilterProcs();
+}
+
+function renderProcTable(rows) {
+  const tbody = document.getElementById('mon-proc-tbody');
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-dim);padding:20px">No processes found</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map(p => {
+    const cpuW = Math.min(p.cpu / 2, 50);
+    const statusCls = p.status === 'running' ? 'proc-status-run' : p.status === 'sleeping' ? 'proc-status-slp' : 'proc-status-oth';
+    const cpuColor = p.cpu > 50 ? 'var(--red)' : p.cpu > 20 ? 'var(--orange)' : 'var(--green)';
+    return `<tr>
+      <td style="color:var(--text-dim)">${p.pid}</td>
+      <td title="${esc(p.cmdline||p.name)}">${esc(p.name)}</td>
+      <td><span class="proc-cpu-bar" style="width:${cpuW}px;background:${cpuColor}"></span><span style="color:${cpuColor}">${p.cpu}%</span></td>
+      <td style="color:var(--text-mid)">${p.ram_mb}</td>
+      <td class="${statusCls}">${p.status}</td>
+      <td style="color:var(--text-dim);font-size:9px">${esc(p.user||'?')}</td>
+      <td><button class="kill-btn" onclick="monKillProc(${p.pid},'${esc(p.name)}')">Kill</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function monDrawTopProcs(procs) {
+  // Only update if process table is empty (user hasn't loaded full list)
+  if (MON.allProcs.length) return;
+  renderProcTable(procs);
+}
+
+async function monKillProc(pid, name) {
+  if (!S.selected) return;
+  if (!confirm(`Kill process "${name}" (PID ${pid})?`)) return;
+  try {
+    const res = await sendCmd('kill_process', {pid}, 8000);
+    if (res.killed) {
+      toast('success', `Killed: ${name} (PID ${pid})`);
+      MON.allProcs = MON.allProcs.filter(p => p.pid !== pid);
+      monFilterProcs();
+    } else {
+      toast('error', res.error || 'Kill failed');
+    }
+  } catch(e) { toast('error', String(e)); }
+}
+
+// Stop monitor when switching away from monitor tab or changing agent
+function monStop() {
+  if (!MON.running) return;
+  MON.running = false;
+  if (MON.timer) clearTimeout(MON.timer);
+  const btn = document.getElementById('mon-toggle-btn');
+  if (btn) { btn.textContent = '▶ Start'; btn.style.borderColor=''; btn.style.color=''; }
+  document.getElementById('mon-status').textContent = 'Idle';
+  MON.allProcs = [];
+  Object.keys(MON.hist).forEach(k => MON.hist[k] = []);
+}
+
 // ── Tabs ───────────────────────────────────────────────────────────────────
 function switchTab(name) {
+  const prev = document.querySelector('.tab.active')?.dataset.tab;
+  if (prev === 'monitor' && name !== 'monitor') monStop();
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
   document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === `panel-${name}`));
+  if (name === 'monitor') setTimeout(monInitCanvases, 50); // after render
 }
 document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
 

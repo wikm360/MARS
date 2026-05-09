@@ -41,6 +41,7 @@ a = Analysis(
         'client.commands.sysinfo',
         'client.commands.uninstall',
         'client.commands.update',
+        'client.commands.monitor',
         'websockets',
         'websockets.legacy',
         'websockets.legacy.client',

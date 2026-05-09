@@ -343,6 +343,85 @@ async def cmd_listdir(conn, cfg, args):
             console.print(table)
 
 
+async def cmd_monitor(conn, cfg, args):
+    """Single snapshot of monitor stats (CLI version)."""
+    with console.status("Fetching monitor stats ..."):
+        result = await send_command(conn, cfg, "monitor_stats", {})
+    if not result:
+        return
+    if result.type == MessageType.COMMAND_ERROR:
+        console.print(f"[red]Error:[/] {result.payload.get('error')}")
+        return
+    r = result.payload.get("result", {})
+    table = Table(title="Live Stats", show_header=True, header_style="bold cyan")
+    table.add_column("Metric", style="cyan")
+    table.add_column("Value")
+    table.add_row("CPU",  f"{r.get('cpu_percent', '?')}%")
+    table.add_row("RAM",  f"{r.get('ram_percent', '?')}%  ({r.get('ram_used_mb')} / {r.get('ram_total_mb')} MB)")
+    table.add_row("Disk", f"{r.get('disk_percent', '?')}%  ({r.get('disk_used_gb')} / {r.get('disk_total_gb')} GB)")
+    table.add_row("Net ↑", f"{r.get('net_sent_kb', 0):.1f} KB/s")
+    table.add_row("Net ↓", f"{r.get('net_recv_kb', 0):.1f} KB/s")
+    table.add_row("Disk R", f"{r.get('disk_read_kb', 0):.1f} KB/s")
+    table.add_row("Disk W", f"{r.get('disk_write_kb', 0):.1f} KB/s")
+    console.print(table)
+
+    procs = r.get("top_processes", [])
+    if procs:
+        pt = Table(title="Top Processes (by CPU)", show_header=True, header_style="bold green")
+        pt.add_column("PID",  style="dim", width=8)
+        pt.add_column("Name", width=28)
+        pt.add_column("CPU %", justify="right")
+        pt.add_column("RAM MB", justify="right")
+        pt.add_column("Status")
+        for p in procs[:10]:
+            pt.add_row(str(p["pid"]), p["name"], str(p["cpu"]), str(p["ram_mb"]), p["status"])
+        console.print(pt)
+
+
+async def cmd_procs(conn, cfg, args):
+    """Full process list."""
+    sort_by = args[0] if args else "cpu"
+    with console.status("Fetching process list ..."):
+        result = await send_command(conn, cfg, "list_processes", {"sort": sort_by})
+    if not result:
+        return
+    if result.type == MessageType.COMMAND_ERROR:
+        console.print(f"[red]Error:[/] {result.payload.get('error')}")
+        return
+    r = result.payload.get("result", {})
+    procs = r.get("processes", [])
+    console.print(f"Total processes: [bold]{r.get('count', len(procs))}[/]")
+    pt = Table(title="Processes", show_header=True, header_style="bold green", show_lines=False)
+    pt.add_column("PID",  style="dim", width=8)
+    pt.add_column("Name", width=28)
+    pt.add_column("CPU %", justify="right", width=8)
+    pt.add_column("RAM MB", justify="right", width=9)
+    pt.add_column("Status", width=12)
+    pt.add_column("User", width=18)
+    for p in procs[:40]:
+        pt.add_row(str(p["pid"]), p["name"], str(p["cpu"]), str(p["ram_mb"]), p["status"], p.get("user",""))
+    console.print(pt)
+    if len(procs) > 40:
+        console.print(f"[dim]... and {len(procs)-40} more[/]")
+
+
+async def cmd_kill(conn, cfg, args):
+    if not args:
+        console.print("[red]Usage: kill <pid>[/]")
+        return
+    pid = args[0]
+    result = await send_command(conn, cfg, "kill_process", {"pid": int(pid)})
+    if result:
+        if result.type == MessageType.COMMAND_ERROR:
+            console.print(f"[red]Error:[/] {result.payload.get('error')}")
+        else:
+            r = result.payload.get("result", result.payload)
+            if r.get("killed"):
+                console.print(f"[green]✓ Killed:[/] {r.get('name')} (PID {r.get('pid')})")
+            else:
+                console.print(f"[red]Error:[/] {r.get('error')}")
+
+
 async def cmd_update(conn, cfg, args):
     if not args:
         console.print("[red]Usage: update <local_exe_path> [version][/]")
@@ -408,6 +487,11 @@ COMMANDS = {
     "listdir": cmd_listdir,
     "uninstall": cmd_uninstall,
     "update": cmd_update,
+    "monitor": cmd_monitor,
+    "top": cmd_monitor,
+    "procs": cmd_procs,
+    "ps": cmd_procs,
+    "kill": cmd_kill,
 }
 
 HELP_TEXT = """
@@ -423,6 +507,9 @@ HELP_TEXT = """
   [cyan]dir[/] [path]                   List directory contents
   [cyan]servers[/] <uri> [<uri>...]     Push new server list to client
   [cyan]redirect[/] <uri>               Redirect client to new server
+  [cyan]monitor[/]                       Live stats snapshot (CPU/RAM/Net/Disk)
+  [cyan]procs[/] [sort_field]           Full process list (sort: cpu/ram_mb/name)
+  [cyan]kill[/] <pid>                   Kill process by PID
   [cyan]uninstall[/]                    Remove agent from target machine
   [cyan]update[/] <exe> [version]       Push new client exe to agent
   [cyan]help[/]                         Show this help
