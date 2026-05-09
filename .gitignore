@@ -33,5 +33,5 @@ downloads/
 # macOS
 .DS_Store
 
-# PyInstaller
-*.spec
+# PyInstaller — exclude generated specs but keep our build spec
+!client.spec
