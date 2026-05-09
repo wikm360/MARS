@@ -24,6 +24,7 @@ a = Analysis(
         'client.commands.file_transfer',
         'client.commands.change_server',
         'client.commands.sysinfo',
+        'client.commands.uninstall',
         'websockets',
         'cryptography',
         'yaml',
@@ -64,6 +65,6 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    # icon='client/assets/icon.ico',   # uncomment and add .ico to use custom icon
-    version_file=None,
+    icon='client/assets/icon.ico',
+    version_file='client/assets/version_info.txt',
 )
