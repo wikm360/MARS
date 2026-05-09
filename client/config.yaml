@@ -1,0 +1,17 @@
+client:
+  # Ordered list of servers — primary first, fallbacks after
+  servers:
+    - "ws://127.0.0.1:8765"
+  # Shared secret must match server config
+  # Override via env: MRAS_SECRET
+  secret: "change-me-in-production"
+  reconnect_delay: 5          # initial delay in seconds
+  reconnect_max_delay: 60     # cap for exponential backoff
+  heartbeat_interval: 20      # seconds between pings
+  # Optional: URL to fetch an updated server list (DNS/config check)
+  config_update_url: ""
+  config_update_interval: 300 # seconds between config checks
+
+logging:
+  level: "INFO"
+  file: "logs/client.log"

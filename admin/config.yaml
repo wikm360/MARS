@@ -1,0 +1,17 @@
+admin:
+  # Server to connect to
+  server: "ws://127.0.0.1:8765"
+  # Admin token — must match server config
+  # Override via env: MRAS_ADMIN_TOKEN
+  admin_token: "admin-secret-token"
+  # Shared secret for encryption
+  # Override via env: MRAS_SECRET
+  secret: "change-me-in-production"
+  # How long to wait for a command result (seconds)
+  command_timeout: 30
+  # Directory where downloaded files are saved
+  download_dir: "downloads"
+
+logging:
+  level: "INFO"
+  file: "logs/admin.log"

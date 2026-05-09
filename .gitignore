@@ -1,0 +1,37 @@
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Env
+.env
+*.env
+
+# Logs
+logs/
+*.log
+
+# Client runtime state
+client/.client_id
+client/servers_override.json
+
+# Downloaded files
+downloads/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+# PyInstaller
+*.spec

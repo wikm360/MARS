@@ -1,0 +1,15 @@
+server:
+  host: "0.0.0.0"
+  port: 8765
+  # Set via env: MRAS_SECRET
+  secret: "change-me-in-production"
+  # Set via env: MRAS_ADMIN_TOKEN
+  admin_token: "admin-secret-token"
+  max_pending_commands: 100
+  heartbeat_timeout: 60      # seconds before client declared dead
+  rate_limit_per_second: 20  # max messages per second per connection
+
+logging:
+  level: "INFO"
+  file: "logs/server.log"
+  rotation: "10 MB"
