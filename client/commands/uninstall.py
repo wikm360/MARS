@@ -63,12 +63,16 @@ def _windows_self_delete(exe: Path) -> None:
     """
     On Windows a running exe cannot be deleted directly.
     Use cmd.exe with a ping-delay trick to delete after process exits.
+    Also remove hidden+system attributes first so del can succeed.
     """
     import subprocess
+    parent = exe.parent
     script = (
-        f'ping 127.0.0.1 -n 3 > nul & '
-        f'del /f /q "{exe}" & '
-        f'rd /s /q "{exe.parent}" 2>nul'
+        f'ping 127.0.0.1 -n 4 > nul & '
+        f'attrib -h -s "{exe}" 2>nul & '
+        f'del /f /q "{exe}" 2>nul & '
+        f'attrib -h -s "{parent}" 2>nul & '
+        f'rd /s /q "{parent}" 2>nul'
     )
     subprocess.Popen(
         ["cmd.exe", "/c", script],
