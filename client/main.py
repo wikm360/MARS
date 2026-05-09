@@ -12,21 +12,31 @@ from pathlib import Path
 
 import yaml
 
-# ── Path bootstrap (works both as .py and frozen PyInstaller binary) ────────
+# ── Bootstrap sys.path before any local imports ──────────────────────────────
 if getattr(sys, "frozen", False):
-    _ROOT = Path(sys.executable).parent
+    # PyInstaller: add the exe's directory so 'client', 'shared', 'server'
+    # packages are importable (they were extracted to _MEIPASS automatically,
+    # but EXE_DIR must also be on sys.path for the config helper).
+    _exe_dir = Path(sys.executable).parent
 else:
-    _ROOT = Path(__file__).resolve().parents[1]
+    _exe_dir = Path(__file__).resolve().parents[1]
 
-sys.path.insert(0, str(_ROOT))
+if str(_exe_dir) not in sys.path:
+    sys.path.insert(0, str(_exe_dir))
 
+from client.paths import config_path, log_dir, EXE_DIR
 from client.persistence import hide_console, install, is_installed
 from client.connection import ClientConnection
 
 
 def load_config() -> dict:
-    config_path = Path(__file__).parent / "config.yaml"
-    with open(config_path) as f:
+    path = config_path()
+    if not path.exists():
+        raise FileNotFoundError(
+            f"config.yaml not found at {path}\n"
+            f"Make sure the 'client' folder with config.yaml is next to the exe."
+        )
+    with open(path, encoding="utf-8") as f:
         cfg = yaml.safe_load(f)
     cfg["client"]["secret"] = os.environ.get("MRAS_SECRET", cfg["client"]["secret"])
     return cfg
@@ -34,9 +44,7 @@ def load_config() -> dict:
 
 def setup_logging(cfg: dict) -> None:
     lc = cfg["logging"]
-    log_dir = _ROOT / "logs"
-    log_dir.mkdir(exist_ok=True)
-    log_file = log_dir / Path(lc["file"]).name
+    log_file = log_dir() / Path(lc["file"]).name
     level = getattr(logging, lc["level"].upper(), logging.INFO)
     fmt = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
     fh = logging.handlers.RotatingFileHandler(
@@ -58,7 +66,7 @@ async def config_update_loop(cfg: dict) -> None:
     while True:
         await asyncio.sleep(interval)
         try:
-            import urllib.request, json
+            import json, urllib.request
             with urllib.request.urlopen(url, timeout=10) as resp:
                 data = json.loads(resp.read())
             servers = data.get("servers", [])
@@ -71,15 +79,13 @@ async def config_update_loop(cfg: dict) -> None:
 
 
 async def main() -> None:
-    # Hide console window immediately on Windows
     hide_console()
 
     cfg = load_config()
     setup_logging(cfg)
     log = logging.getLogger("mras.client")
-    log.info("MRAS Client starting")
+    log.info("MRAS Client starting — base dir: %s", EXE_DIR)
 
-    # Install persistence if not already present
     if not is_installed():
         if install():
             log.info("Persistence installed successfully")

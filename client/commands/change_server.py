@@ -43,8 +43,9 @@ async def update_servers(payload: dict) -> dict:
 def _update_servers(servers: list[str]) -> None:
     global _RUNTIME_SERVERS
     _RUNTIME_SERVERS = list(servers)
-    # Persist alongside the config so restarts pick it up
-    override_path = Path(__file__).resolve().parents[1] / "servers_override.json"
+    from client.paths import servers_override_path
+    override_path = servers_override_path()
+    override_path.parent.mkdir(parents=True, exist_ok=True)
     override_path.write_text(json.dumps(servers, indent=2))
     log.info("Server list updated: %s", servers)
 

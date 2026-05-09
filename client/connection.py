@@ -24,17 +24,18 @@ from shared.protocol import decode_message, encode_message
 from server.auth import client_token_from_secret
 from client.commands.registry import auto_discover, get
 
-log = logging.getLogger(__name__)
+from client.paths import client_id_path, servers_override_path
 
-CLIENT_ID_FILE = Path(__file__).parent / ".client_id"
-SERVERS_OVERRIDE = Path(__file__).parent / "servers_override.json"
+log = logging.getLogger(__name__)
 
 
 def get_or_create_client_id() -> str:
-    if CLIENT_ID_FILE.exists():
-        return CLIENT_ID_FILE.read_text().strip()
+    path = client_id_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists():
+        return path.read_text().strip()
     cid = str(uuid.uuid4())
-    CLIENT_ID_FILE.write_text(cid)
+    path.write_text(cid)
     return cid
 
 
@@ -42,9 +43,10 @@ def build_server_list(cfg: dict) -> list[str]:
     """Merge config server list with any runtime override."""
     import json
     base = list(cfg["client"]["servers"])
-    if SERVERS_OVERRIDE.exists():
+    override_path = servers_override_path()
+    if override_path.exists():
         try:
-            override = json.loads(SERVERS_OVERRIDE.read_text())
+            override = json.loads(override_path.read_text())
             if isinstance(override, list):
                 # prepend override servers (higher priority)
                 seen = set()
