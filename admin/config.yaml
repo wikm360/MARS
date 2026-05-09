@@ -2,10 +2,10 @@ admin:
   # Server to connect to
   server: "ws://127.0.0.1:8765"
   # Admin token — must match server config
-  # Override via env: MRAS_ADMIN_TOKEN
+  # Override via env: MARS_ADMIN_TOKEN
   admin_token: "admin-secret-token"
   # Shared secret for encryption
-  # Override via env: MRAS_SECRET
+  # Override via env: MARS_SECRET
   secret: "change-me-in-production"
   # How long to wait for a command result (seconds)
   command_timeout: 30

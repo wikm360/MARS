@@ -21,8 +21,8 @@ log = logging.getLogger(__name__)
 class AdminConnection:
     def __init__(self, cfg: dict) -> None:
         self._cfg = cfg
-        self._secret = os.environ.get("MRAS_SECRET", cfg["admin"]["secret"])
-        self._admin_token = os.environ.get("MRAS_ADMIN_TOKEN", cfg["admin"]["admin_token"])
+        self._secret = os.environ.get("MARS_SECRET", cfg["admin"]["secret"])
+        self._admin_token = os.environ.get("MARS_ADMIN_TOKEN", cfg["admin"]["admin_token"])
         self._server_uri = cfg["admin"]["server"]
         self._cipher: SessionCipher | None = None
         self._ws = None

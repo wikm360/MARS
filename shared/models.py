@@ -1,5 +1,5 @@
 """
-Shared data models and message schema for MRAS protocol.
+Shared data models and message schema for MARS protocol.
 """
 from __future__ import annotations
 import time

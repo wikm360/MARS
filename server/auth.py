@@ -1,5 +1,5 @@
 """
-Authentication helpers for the MRAS server.
+Authentication helpers for the MARS server.
 Validates client and admin tokens, manages per-connection rate limiting.
 """
 from __future__ import annotations

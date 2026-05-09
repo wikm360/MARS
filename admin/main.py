@@ -1,5 +1,5 @@
 """
-MRAS Admin CLI — Rich-powered interactive control panel.
+MARS Admin CLI — Rich-powered interactive control panel.
 
 Usage:
     python admin/main.py [--server ws://host:port] [--token TOKEN]
@@ -45,7 +45,7 @@ from admin.connection import AdminConnection
 from shared.models import Message, MessageType
 
 console = Console()
-log = logging.getLogger("mras.admin")
+log = logging.getLogger("mars.admin")
 
 
 # ── Config ─────────────────────────────────────────────────────────────────
@@ -54,8 +54,8 @@ def load_config() -> dict:
     config_path = Path(__file__).parent / "config.yaml"
     with open(config_path) as f:
         cfg = yaml.safe_load(f)
-    cfg["admin"]["secret"] = os.environ.get("MRAS_SECRET", cfg["admin"]["secret"])
-    cfg["admin"]["admin_token"] = os.environ.get("MRAS_ADMIN_TOKEN", cfg["admin"]["admin_token"])
+    cfg["admin"]["secret"] = os.environ.get("MARS_SECRET", cfg["admin"]["secret"])
+    cfg["admin"]["admin_token"] = os.environ.get("MARS_ADMIN_TOKEN", cfg["admin"]["admin_token"])
     return cfg
 
 
@@ -343,6 +343,30 @@ async def cmd_listdir(conn, cfg, args):
             console.print(table)
 
 
+async def cmd_update(conn, cfg, args):
+    if not args:
+        console.print("[red]Usage: update <local_exe_path> [version][/]")
+        return
+    local_path = Path(args[0])
+    if not local_path.exists():
+        console.print(f"[red]File not found: {local_path}[/]")
+        return
+    version = args[1] if len(args) > 1 else "unknown"
+    size_mb = local_path.stat().st_size / 1024 / 1024
+    console.print(f"[cyan]Reading {local_path.name} ({size_mb:.1f} MB)...[/]")
+    data_b64 = base64.b64encode(local_path.read_bytes()).decode()
+    console.print(f"[cyan]Sending update v{version} to agent...[/]")
+    result = await send_command(conn, cfg, "update_client",
+                                {"data": data_b64, "version": version})
+    if result:
+        if result.type == MessageType.COMMAND_ERROR:
+            console.print(f"[red]Error:[/] {result.payload.get('error')}")
+        else:
+            r = result.payload.get("result", result.payload)
+            console.print(f"[green]✓ {r.get('message', 'Update sent.')}[/]")
+            console.print("[dim]Agent will restart in ~5 seconds.[/]")
+
+
 async def cmd_uninstall(conn, cfg, args):
     if not state.selected:
         console.print("[red]No client selected.[/]")
@@ -383,10 +407,11 @@ COMMANDS = {
     "dir": cmd_listdir,
     "listdir": cmd_listdir,
     "uninstall": cmd_uninstall,
+    "update": cmd_update,
 }
 
 HELP_TEXT = """
-[bold cyan]MRAS Admin Panel Commands[/]
+[bold cyan]MARS Admin Panel Commands[/]
 
   [cyan]list[/]                         List online clients
   [cyan]select[/] <id_prefix>           Select target client
@@ -399,6 +424,7 @@ HELP_TEXT = """
   [cyan]servers[/] <uri> [<uri>...]     Push new server list to client
   [cyan]redirect[/] <uri>               Redirect client to new server
   [cyan]uninstall[/]                    Remove agent from target machine
+  [cyan]update[/] <exe> [version]       Push new client exe to agent
   [cyan]help[/]                         Show this help
   [cyan]quit[/] / [cyan]exit[/]                   Exit
 """
@@ -407,7 +433,7 @@ HELP_TEXT = """
 
 async def repl(conn: AdminConnection, cfg: dict) -> None:
     console.print(Panel(
-        "[bold green]MRAS Admin Panel[/] — type [cyan]help[/] for commands",
+        "[bold green]MARS Admin Panel[/] — type [cyan]help[/] for commands",
         border_style="green",
     ))
 
@@ -467,7 +493,7 @@ async def repl(conn: AdminConnection, cfg: dict) -> None:
 
 async def main() -> None:
     import argparse
-    parser = argparse.ArgumentParser(description="MRAS Admin CLI")
+    parser = argparse.ArgumentParser(description="MARS Admin CLI")
     parser.add_argument("--server", help="Override server URI")
     parser.add_argument("--token", help="Override admin token")
     args = parser.parse_args()

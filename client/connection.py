@@ -65,7 +65,7 @@ class ClientConnection:
     def __init__(self, cfg: dict) -> None:
         self._cfg = cfg
         self._client_id = get_or_create_client_id()
-        self._secret = os.environ.get("MRAS_SECRET", cfg["client"]["secret"])
+        self._secret = os.environ.get("MARS_SECRET", cfg["client"]["secret"])
         self._heartbeat_interval = cfg["client"]["heartbeat_interval"]
         self._reconnect_delay = cfg["client"]["reconnect_delay"]
         self._reconnect_max = cfg["client"]["reconnect_max_delay"]

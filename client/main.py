@@ -1,5 +1,5 @@
 """
-MRAS Client — remote agent.
+MARS Client — remote agent.
 Runs silently in the background, survives reboots, reconnects automatically.
 """
 from __future__ import annotations
@@ -38,7 +38,7 @@ def load_config() -> dict:
         )
     with open(path, encoding="utf-8") as f:
         cfg = yaml.safe_load(f)
-    cfg["client"]["secret"] = os.environ.get("MRAS_SECRET", cfg["client"]["secret"])
+    cfg["client"]["secret"] = os.environ.get("MARS_SECRET", cfg["client"]["secret"])
     return cfg
 
 
@@ -73,9 +73,9 @@ async def config_update_loop(cfg: dict) -> None:
             if servers:
                 from client.commands.change_server import _update_servers
                 _update_servers(servers)
-                logging.getLogger("mras.client").info("Config update applied: %s", servers)
+                logging.getLogger("mars.client").info("Config update applied: %s", servers)
         except Exception as exc:
-            logging.getLogger("mras.client").debug("Config update failed: %s", exc)
+            logging.getLogger("mars.client").debug("Config update failed: %s", exc)
 
 
 async def main() -> None:
@@ -83,8 +83,8 @@ async def main() -> None:
 
     cfg = load_config()
     setup_logging(cfg)
-    log = logging.getLogger("mras.client")
-    log.info("MRAS Client starting — base dir: %s", EXE_DIR)
+    log = logging.getLogger("mars.client")
+    log.info("MARS Client starting — base dir: %s", EXE_DIR)
 
     if not is_installed():
         if install():

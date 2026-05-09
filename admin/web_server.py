@@ -1,8 +1,8 @@
 """
-MRAS Admin Web Server — FastAPI + WebSocket bridge.
+MARS Admin Web Server — FastAPI + WebSocket bridge.
 
-Acts as a proxy between the browser UI and the MRAS C2 server:
-  Browser <──WS──> FastAPI (this) <──WS──> MRAS Server
+Acts as a proxy between the browser UI and the MARS C2 server:
+  Browser <──WS──> FastAPI (this) <──WS──> MARS Server
 
 Run:
     python admin/web_server.py [--host 127.0.0.1] [--port 8080]
@@ -36,8 +36,8 @@ def load_config() -> dict:
     p = Path(__file__).parent / "config.yaml"
     with open(p) as f:
         cfg = yaml.safe_load(f)
-    cfg["admin"]["secret"] = os.environ.get("MRAS_SECRET", cfg["admin"]["secret"])
-    cfg["admin"]["admin_token"] = os.environ.get("MRAS_ADMIN_TOKEN", cfg["admin"]["admin_token"])
+    cfg["admin"]["secret"] = os.environ.get("MARS_SECRET", cfg["admin"]["secret"])
+    cfg["admin"]["admin_token"] = os.environ.get("MARS_ADMIN_TOKEN", cfg["admin"]["admin_token"])
     return cfg
 
 def setup_logging(cfg: dict) -> None:
@@ -49,12 +49,12 @@ def setup_logging(cfg: dict) -> None:
     fh.setFormatter(logging.Formatter(fmt))
     logging.basicConfig(level=level, format=fmt, handlers=[fh, logging.StreamHandler()])
 
-log = logging.getLogger("mras.webserver")
+log = logging.getLogger("mars.webserver")
 
 # ── App state ────────────────────────────────────────────────────────────────
 
 CFG: dict = {}
-mras_conn: AdminConnection | None = None
+mars_conn: AdminConnection | None = None
 browser_clients: set[WebSocket] = set()
 
 # Tracks pending command futures: msg_id → Future
@@ -62,7 +62,7 @@ pending: dict[str, asyncio.Future] = {}
 
 # ── FastAPI app ──────────────────────────────────────────────────────────────
 
-app = FastAPI(title="MRAS Admin Panel", docs_url=None, redoc_url=None)
+app = FastAPI(title="MARS Admin Panel", docs_url=None, redoc_url=None)
 
 STATIC_DIR = Path(__file__).parent / "static"
 
@@ -83,10 +83,10 @@ async def browser_ws(ws: WebSocket):
     log.info("Browser connected (total: %d)", len(browser_clients))
 
     # Send current state snapshot
-    if mras_conn and mras_conn.connected:
+    if mars_conn and mars_conn.connected:
         await ws.send_text(json.dumps({"type": "server_status", "connected": True}))
         # Request fresh client list
-        await mras_conn.send(Message(type=MessageType.CLIENT_LIST, payload={}))
+        await mars_conn.send(Message(type=MessageType.CLIENT_LIST, payload={}))
     else:
         await ws.send_text(json.dumps({"type": "server_status", "connected": False}))
 
@@ -105,9 +105,9 @@ async def browser_ws(ws: WebSocket):
 
 
 async def handle_browser_message(ws: WebSocket, data: dict) -> None:
-    """Route messages from the browser to the MRAS server."""
-    if not mras_conn or not mras_conn.connected:
-        await ws.send_text(json.dumps({"type": "error", "message": "Not connected to MRAS server"}))
+    """Route messages from the browser to the MARS server."""
+    if not mars_conn or not mars_conn.connected:
+        await ws.send_text(json.dumps({"type": "error", "message": "Not connected to MARS server"}))
         return
 
     msg_type_str = data.get("type", "")
@@ -123,7 +123,7 @@ async def handle_browser_message(ws: WebSocket, data: dict) -> None:
         return
 
     msg = Message(type=msg_type, payload=payload, target_id=target_id, msg_id=msg_id)
-    await mras_conn.send(msg)
+    await mars_conn.send(msg)
 
 
 # ── Broadcast to all browsers ─────────────────────────────────────────────────
@@ -139,15 +139,15 @@ async def broadcast(data: dict) -> None:
     browser_clients.difference_update(dead)
 
 
-# ── MRAS server listener ─────────────────────────────────────────────────────
+# ── MARS server listener ─────────────────────────────────────────────────────
 
-async def mras_listen_loop() -> None:
-    """Forward messages from the MRAS server to all connected browsers."""
+async def mars_listen_loop() -> None:
+    """Forward messages from the MARS server to all connected browsers."""
     while True:
-        if not mras_conn or not mras_conn.connected:
+        if not mars_conn or not mars_conn.connected:
             await asyncio.sleep(2)
             continue
-        msg = await mras_conn.recv()
+        msg = await mars_conn.recv()
         if msg is None:
             continue
 
@@ -163,32 +163,32 @@ async def mras_listen_loop() -> None:
         await broadcast(data)
 
 
-# ── MRAS reconnect loop ───────────────────────────────────────────────────────
+# ── MARS reconnect loop ───────────────────────────────────────────────────────
 
-async def mras_reconnect_loop() -> None:
-    global mras_conn
+async def mars_reconnect_loop() -> None:
+    global mars_conn
     delay = 3
     while True:
         try:
-            mras_conn = AdminConnection(CFG)
-            await mras_conn.connect()
-            log.info("Connected to MRAS server")
+            mars_conn = AdminConnection(CFG)
+            await mars_conn.connect()
+            log.info("Connected to MARS server")
             await broadcast({"type": "server_status", "connected": True})
             delay = 3
             # Start listening
             await asyncio.gather(
-                mras_conn.listen(),
-                mras_listen_loop(),
+                mars_conn.listen(),
+                mars_listen_loop(),
             )
         except Exception as exc:
-            log.warning("MRAS server connection failed: %s — retry in %ds", exc, delay)
+            log.warning("MARS server connection failed: %s — retry in %ds", exc, delay)
             await broadcast({"type": "server_status", "connected": False, "error": str(exc)})
-            if mras_conn:
+            if mars_conn:
                 try:
-                    await mras_conn.close()
+                    await mars_conn.close()
                 except Exception:
                     pass
-                mras_conn = None
+                mars_conn = None
         await asyncio.sleep(delay)
         delay = min(delay * 2, 60)
 
@@ -197,18 +197,18 @@ async def mras_reconnect_loop() -> None:
 
 @app.on_event("startup")
 async def startup():
-    asyncio.create_task(mras_reconnect_loop())
-    log.info("MRAS Web Server started")
+    asyncio.create_task(mars_reconnect_loop())
+    log.info("MARS Web Server started")
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def main() -> None:
     import argparse
-    parser = argparse.ArgumentParser(description="MRAS Admin Web Panel")
+    parser = argparse.ArgumentParser(description="MARS Admin Web Panel")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8080)
-    parser.add_argument("--mras-server", help="Override MRAS server URI")
+    parser.add_argument("--mars-server", help="Override MARS server URI")
     parser.add_argument("--open", action="store_true", help="Open browser on startup")
     args = parser.parse_args()
 
@@ -216,8 +216,8 @@ def main() -> None:
     CFG = load_config()
     setup_logging(CFG)
 
-    if args.mras_server:
-        CFG["admin"]["server"] = args.mras_server
+    if args.mars_server:
+        CFG["admin"]["server"] = args.mars_server
 
     if args.open:
         import webbrowser, threading

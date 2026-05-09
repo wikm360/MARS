@@ -3,7 +3,7 @@ client:
   servers:
     - "ws://127.0.0.1:8765"
   # Shared secret must match server config
-  # Override via env: MRAS_SECRET
+  # Override via env: MARS_SECRET
   secret: "change-me-in-production"
   reconnect_delay: 5          # initial delay in seconds
   reconnect_max_delay: 60     # cap for exponential backoff

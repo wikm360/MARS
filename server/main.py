@@ -1,5 +1,5 @@
 """
-MRAS Server — asyncio WebSocket relay / C2.
+MARS Server — asyncio WebSocket relay / C2.
 
 Auth flow:
   1. Any connection sends AUTH (plain, no cipher yet).
@@ -41,8 +41,8 @@ def load_config() -> dict:
     with open(config_path) as f:
         cfg = yaml.safe_load(f)
     s = cfg["server"]
-    s["secret"] = os.environ.get("MRAS_SECRET", s["secret"])
-    s["admin_token"] = os.environ.get("MRAS_ADMIN_TOKEN", s["admin_token"])
+    s["secret"] = os.environ.get("MARS_SECRET", s["secret"])
+    s["admin_token"] = os.environ.get("MARS_ADMIN_TOKEN", s["admin_token"])
     return cfg
 
 # ── Logging ────────────────────────────────────────────────────────────────
@@ -60,7 +60,7 @@ def setup_logging(cfg: dict) -> None:
     handlers.append(fh)
     logging.basicConfig(level=level, format=fmt, handlers=handlers)
 
-log = logging.getLogger("mras.server")
+log = logging.getLogger("mars.server")
 
 # ── Server state ───────────────────────────────────────────────────────────
 
@@ -294,7 +294,7 @@ async def main() -> None:
 
     host = CFG["server"]["host"]
     port = CFG["server"]["port"]
-    log.info("MRAS Server starting on %s:%d", host, port)
+    log.info("MARS Server starting on %s:%d", host, port)
 
     async with websockets.serve(router, host, port, ping_interval=20, ping_timeout=30,
                                 max_size=20 * 1024 * 1024):

@@ -1,4 +1,4 @@
-# MRAS — Modular Remote Admin System
+# MARS — Modular Advanced Remote System
 
 یک فریم‌ورک حرفه‌ای، ماژولار و آماده پروداکشن برای مدیریت ریموت، ساخته‌شده با Python.
 
@@ -23,7 +23,7 @@
 ## معماری
 
 ```
-MRAS/
+MARS/
 ├── shared/               # پروتکل، رمزنگاری، مدل‌های داده (مشترک بین همه بخش‌ها)
 │   ├── models.py         # انواع پیام، ClientInfo، enum‌ها
 │   ├── crypto.py         # رمزنگاری Fernet با کلید مشتق‌شده از PBKDF2
@@ -78,7 +78,7 @@ Admin  ──→  Server (C2)  ──→  Client(s)
 
 ```bash
 git clone <repo-url>
-cd MRAS
+cd MARS
 pip install -r requirements.txt
 ```
 
@@ -103,8 +103,8 @@ logging:
 یا از environment variable استفاده کن (توصیه‌شده):
 
 ```bash
-export MRAS_SECRET="یک-رشته-تصادفی-قوی-که-کسی-نمیدونه"
-export MRAS_ADMIN_TOKEN="توکن-ادمین-مخفی"
+export MARS_SECRET="یک-رشته-تصادفی-قوی-که-کسی-نمیدونه"
+export MARS_ADMIN_TOKEN="توکن-ادمین-مخفی"
 ```
 
 ### مرحله ۳ — باز کردن پورت فایروال
@@ -135,18 +135,18 @@ sudo nano /etc/systemd/system/mras-server.service
 
 ```ini
 [Unit]
-Description=MRAS C2 Server
+Description=MARS C2 Server
 After=network.target
 
 [Service]
 Type=simple
 User=ubuntu
-WorkingDirectory=/home/ubuntu/MRAS
+WorkingDirectory=/home/ubuntu/MARS
 ExecStart=/usr/bin/python3 server/main.py
 Restart=always
 RestartSec=5
-Environment=MRAS_SECRET=یک-رشته-تصادفی-قوی
-Environment=MRAS_ADMIN_TOKEN=توکن-ادمین-مخفی
+Environment=MARS_SECRET=یک-رشته-تصادفی-قوی
+Environment=MARS_ADMIN_TOKEN=توکن-ادمین-مخفی
 
 [Install]
 WantedBy=multi-user.target
@@ -292,10 +292,10 @@ python client/main.py
 python admin/web_server.py
 
 # اتصال به سرور با آدرس دلخواه
-python admin/web_server.py --mras-server ws://94.183.170.121:8765
+python admin/web_server.py --mars-server ws://94.183.170.121:8765
 
 # باز کردن مرورگر به‌صورت خودکار
-python admin/web_server.py --mras-server ws://94.183.170.121:8765 --open
+python admin/web_server.py --mars-server ws://94.183.170.121:8765 --open
 
 # تغییر پورت web panel
 python admin/web_server.py --port 9090
