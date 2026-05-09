@@ -7,8 +7,6 @@ import logging
 import os
 import time
 
-import psutil
-
 from client.commands.registry import register
 
 log = logging.getLogger(__name__)
@@ -20,39 +18,26 @@ _prev_disk  = {"t": 0.0, "read": 0, "write": 0}
 
 @register("monitor_stats")
 async def monitor_stats(payload: dict) -> dict:
-    """
-    Return a lightweight snapshot used for live graphs:
-      cpu_percent, ram_percent, ram_used_mb, ram_total_mb,
-      disk_percent, disk_used_gb, disk_total_gb,
-      net_sent_kb, net_recv_kb  (delta since last call)
-      disk_read_kb, disk_write_kb (delta since last call)
-      top_processes: list of {pid, name, cpu, ram_mb, status}
-    """
+    import psutil
     global _prev_net, _prev_disk
     now = time.monotonic()
 
-    # CPU (non-blocking, 0-interval → since last call)
     cpu = psutil.cpu_percent(interval=None)
-    # Per-core breakdown
     cpu_cores = psutil.cpu_percent(interval=None, percpu=True)
 
-    # RAM
     vm = psutil.virtual_memory()
 
-    # Disk (root / C:\)
     try:
         du = psutil.disk_usage("C:\\" if os.name == "nt" else "/")
     except Exception:
         du = None
 
-    # Network delta
     nc = psutil.net_io_counters()
     dt_net = now - _prev_net["t"] if _prev_net["t"] else 1.0
     net_sent_kb = max(0, (nc.bytes_sent - _prev_net["sent"]) / 1024 / max(dt_net, 0.1))
     net_recv_kb = max(0, (nc.bytes_recv - _prev_net["recv"]) / 1024 / max(dt_net, 0.1))
     _prev_net = {"t": now, "sent": nc.bytes_sent, "recv": nc.bytes_recv}
 
-    # Disk I/O delta
     try:
         dc = psutil.disk_io_counters()
         dt_disk = now - _prev_disk["t"] if _prev_disk["t"] else 1.0
@@ -62,7 +47,6 @@ async def monitor_stats(payload: dict) -> dict:
     except Exception:
         disk_read_kb = disk_write_kb = 0.0
 
-    # Top 12 processes by CPU (non-blocking)
     procs = []
     for p in psutil.process_iter(["pid", "name", "cpu_percent", "memory_info", "status", "username"]):
         try:
@@ -100,7 +84,7 @@ async def monitor_stats(payload: dict) -> dict:
 
 @register("list_processes")
 async def list_processes(payload: dict) -> dict:
-    """Full process list with optional sort field."""
+    import psutil
     sort_by = payload.get("sort", "cpu")
     procs = []
     for p in psutil.process_iter(["pid", "name", "cpu_percent", "memory_info",
@@ -127,7 +111,7 @@ async def list_processes(payload: dict) -> dict:
 
 @register("kill_process")
 async def kill_process(payload: dict) -> dict:
-    """Kill a process by PID."""
+    import psutil
     pid = payload.get("pid")
     if not pid:
         return {"error": "pid required"}
