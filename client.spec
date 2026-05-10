@@ -23,9 +23,10 @@ a = Analysis(
     pathex=[str(Path('.').resolve())],
     binaries=[],
     datas=[
-        # NOTE: config.yaml is NOT bundled inside the exe.
-        # It must be placed next to the exe in a 'client/' subfolder.
-        # This way the user can edit the config without rebuilding.
+        # config.yaml is bundled as a fallback so the exe works even after
+        # relocation to AppData (where no client/ folder exists yet).
+        # A client/config.yaml placed next to the exe always takes priority.
+        ('client/config.yaml', 'client'),
         ('shared', 'shared'),
         ('server', 'server'),
     ],

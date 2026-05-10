@@ -27,8 +27,22 @@ EXE_DIR: Path = _exe_dir()
 
 
 def config_path() -> Path:
-    """client/config.yaml — must sit next to the exe when deployed."""
-    return EXE_DIR / "client" / "config.yaml"
+    """
+    Locate client/config.yaml.
+    Search order:
+      1. Next to the exe (user-editable, preferred)
+      2. Bundled inside the PyInstaller archive (sys._MEIPASS) as fallback
+    """
+    external = EXE_DIR / "client" / "config.yaml"
+    if external.exists():
+        return external
+    # Fallback: config bundled inside the exe via PyInstaller datas
+    if getattr(sys, "frozen", False):
+        meipass = Path(getattr(sys, "_MEIPASS", ""))
+        bundled = meipass / "client" / "config.yaml"
+        if bundled.exists():
+            return bundled
+    return external  # not found — caller will raise a clear error
 
 
 def client_id_path() -> Path:
